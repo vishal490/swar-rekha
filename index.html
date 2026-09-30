@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Swar Rekha: sing and see your swaras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&family=Tiro+Devanagari+Hindi&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF0F6; --panel:#FFFFFF; --ink:#1B1F3B; --muted:#5B6180;
+  --grid:#D8DCE8; --grid-strong:#9EA5C2; --line:#C4760F; --line-off:#9097B5;
+  --accent2:#2F7F7A; --border:#D3D7E4; --danger:#B23A48;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161A33; --panel:#1F2445; --ink:#EDE9DF; --muted:#A2A9C9;
+    --grid:#2B3159; --grid-strong:#4A5285; --line:#F0A93B; --line-off:#6E7599;
+    --accent2:#5FC2B9; --border:#343B68; --danger:#F07A88;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161A33; --panel:#1F2445; --ink:#EDE9DF; --muted:#A2A9C9;
+  --grid:#2B3159; --grid-strong:#4A5285; --line:#F0A93B; --line-off:#6E7599;
+  --accent2:#5FC2B9; --border:#343B68; --danger:#F07A88;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hind",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 20px 40px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:20px}
+h1{font-family:"Tiro Devanagari Hindi",Georgia,serif;font-weight:400;font-size:2.6rem;line-height:1.05;margin:0}
+h1 .dev{display:block;font-size:1.1rem;color:var(--muted);margin-top:4px}
+.lede{margin:0;max-width:46ch;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+button,select{font:inherit;font-size:.95rem;color:var(--ink);background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px 14px;cursor:pointer;min-height:42px}
+button:hover,select:hover{border-color:var(--grid-strong)}
+button:focus-visible,select:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600;padding:9px 20px}
+button.primary.on{background:var(--danger);border-color:var(--danger);color:#fff}
+label.sa{display:flex;align-items:center;gap:8px;font-size:.95rem;color:var(--muted)}
+.status{min-height:1.5em;margin:0 0 18px;color:var(--muted);font-size:.95rem}
+.status.err{color:var(--danger)}
+main{display:grid;grid-template-columns:230px 1fr;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:16px}
+.card{padding:20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.card.idle .big{opacity:.35}
+.big{font-family:"Tiro Devanagari Hindi",Georgia,serif;font-size:4.2rem;line-height:1;min-height:6.2rem;display:flex;align-items:center;justify-content:center;transition:opacity .2s}
+.big .n{font-size:inherit;padding:0}
+.big .n .top,.big .n .bot{height:16px}
+.big .dot{width:10px;height:10px}
+.big .bar{width:4px;height:16px}
+.big .komal .g{border-bottom-width:4px}
+.sw-name{font-weight:600;font-size:1.1rem}
+.saptak{color:var(--muted);font-size:.9rem;margin-top:-4px}
+.meter{width:100%;margin-top:14px}
+.track{position:relative;height:10px;border-radius:5px;background:linear-gradient(90deg,var(--grid) 0 35%,color-mix(in srgb,var(--line) 35%,var(--grid)) 35% 65%,var(--grid) 65%)}
+.track::after{content:"";position:absolute;left:50%;top:-4px;width:2px;height:18px;background:var(--grid-strong);transform:translateX(-50%)}
+.needle{position:absolute;top:-6px;width:6px;height:22px;border-radius:3px;background:var(--line);left:50%;transform:translateX(-50%);transition:left .08s linear}
+.meter-scale{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:6px}
+.readout{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem}
+.graph{padding:6px 6px 4px;min-width:0}
+canvas{display:block;width:100%;height:440px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.85rem;color:var(--muted);padding:4px 12px 10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:18px;height:4px;border-radius:2px;display:inline-block}
+.trail{grid-column:1 / -1;padding:14px 18px 16px}
+.trail-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+.trail-head h2{font-size:1rem;font-weight:600;margin:0}
+.trail-head button{min-height:34px;padding:4px 12px;font-size:.85rem}
+.notes{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px;min-height:64px;max-height:180px;overflow:auto;font-family:"Tiro Devanagari Hindi",Georgia,serif}
+.notes .empty{font-family:"Hind",sans-serif;color:var(--muted);font-size:.95rem}
+.n{display:inline-flex;flex-direction:column;align-items:center;font-size:1.55rem;line-height:1.1;padding:0 3px}
+.n .top,.n .bot{display:flex;gap:3px;justify-content:center;align-items:center;height:9px}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;display:block}
+.bar{width:2px;height:9px;background:currentColor;display:block}
+.komal .g{border-bottom:2px solid currentColor;line-height:1}
+.gap{width:18px}
+.notes .n:last-child{color:var(--line)}
+.help{grid-column:1 / -1;color:var(--muted);font-size:.9rem;padding:0 4px;max-width:78ch}
+.help p{margin:.3em 0}
+@media (max-width:760px){
+  main{grid-template-columns:1fr}
+  .card{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:4px 18px;padding:14px}
+  .big{font-size:3.2rem;min-height:5rem}
+  .card .meter{flex-basis:100%}
+  canvas{height:360px}
+  h1{font-size:2.1rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Swar Rekha<span class="dev">स्वर रेखा</span></h1>
+    <p class="lede">Sing, and see which swara you're on. The line rises and falls with your voice, measured against your Sa.</p>
+  </header>
+
+  <div class="controls">
+    <button id="micBtn" class="primary">Start listening</button>
+    <label class="sa" for="saSel">Sa <select id="saSel" aria-label="Choose your Sa"></select></label>
+    <button id="setSaBtn">Set Sa from my voice</button>
+    <button id="playSaBtn">Play Sa</button>
+    <button id="demoBtn">Try a demo</button>
+    <button id="scriptBtn">Show Sa Re Ga</button>
+  </div>
+  <p id="status" class="status" aria-live="polite">Men often sing with Sa at C♯ or D, women at G♯ or A. Pick yours, or let the app find it.</p>
+
+  <main>
+    <section class="panel card idle" id="card" aria-label="Current swara">
+      <div class="big" id="big"><span class="n"><span class="top"></span><span class="g">—</span><span class="bot"></span></span></div>
+      <div>
+        <div class="sw-name" id="swName">Waiting for your voice</div>
+        <div class="saptak" id="saptak">&nbsp;</div>
+      </div>
+      <div class="meter" aria-hidden="true">
+        <div class="track"><div class="needle" id="needle"></div></div>
+        <div class="meter-scale"><span>flat</span><span id="cents">0 cents</span><span>sharp</span></div>
+      </div>
+      <div class="readout" id="hz">&nbsp;</div>
+    </section>
+
+    <section class="panel graph" aria-label="Pitch line graph">
+      <canvas id="cv"></canvas>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--line)"></i>On a swara (within 15 cents)</span>
+        <span><i class="sw" style="background:var(--line-off)"></i>Between swaras</span>
+        <span>Underline = komal, bar above = tivra, dot below = mandra, dot above = taar</span>
+      </div>
+    </section>
+
+    <section class="panel trail" aria-label="Notes you sang">
+      <div class="trail-head">
+        <h2>Your phrase</h2>
+        <button id="clearBtn">Clear</button>
+      </div>
+      <div class="notes" id="notes"></div>
+    </section>
+
+    <div class="help">
+      <p>Use headphones if you play Sa while listening, so the speaker doesn't get plotted as your voice. A note appears in your phrase once you hold it for a moment.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+const $ = id => document.getElementById(id);
+const SW = [
+  {d:'सा', l:'Sa',  name:'Sa',        type:'s'},
+  {d:'रे', l:'Re',  name:'Komal Re',  type:'k'},
+  {d:'रे', l:'Re',  name:'Re',        type:'s'},
+  {d:'ग',  l:'Ga',  name:'Komal Ga',  type:'k'},
+  {d:'ग',  l:'Ga',  name:'Ga',        type:'s'},
+  {d:'म',  l:'Ma',  name:'Ma',        type:'s'},
+  {d:'म',  l:'Ma',  name:'Tivra Ma',  type:'t'},
+  {d:'प',  l:'Pa',  name:'Pa',        type:'s'},
+  {d:'ध',  l:'Dha', name:'Komal Dha', type:'k'},
+  {d:'ध',  l:'Dha', name:'Dha',       type:'s'},
+  {d:'नि', l:'Ni',  name:'Komal Ni',  type:'k'},
+  {d:'नि', l:'Ni',  name:'Ni',        type:'s'},
+];
+const WESTERN = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const LO = -7, HI = 19;          // mandra Pa up to taar Pa
+const WINDOW = 8000;             // ms of history on screen
+
+let audioCtx=null, analyser=null, stream=null, buf=null, listening=false;
+let saFreq = 440*Math.pow(2,(49-69)/12); // C#3
+let script = 'dev';
+let demo = null, capture = null;
+const samples = [];
+let hist = [];
+let cur = {n:null,start:0}, lastCommitted = null, lastVoiced = 0;
+const trail = [];
+let lastCardUpdate = 0;
+
+const mod = n => ((n%12)+12)%12;
+const oct = n => Math.floor(n/12);
+
+/* ---------- UI setup ---------- */
+const sel = $('saSel');
+for(let m=45;m<=64;m++){
+  const f = 440*Math.pow(2,(m-69)/12);
+  const o = document.createElement('option');
+  o.value = f.toFixed(3);
+  o.textContent = `${WESTERN[m%12]}${Math.floor(m/12)-1} (${f.toFixed(1)} Hz)`;
+  if(m===49) o.selected = true;
+  sel.appendChild(o);
+}
+sel.addEventListener('change',()=>{ saFreq = parseFloat(sel.value); hist=[]; setStatus(`Sa set to ${saFreq.toFixed(1)} Hz.`); });
+
+function setStatus(msg, err){ const s=$('status'); s.textContent=msg; s.classList.toggle('err',!!err); }
+
+function ensureCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+async function startMic(){
+  try{
+    ensureCtx();
+    stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:false}});
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    src.connect(analyser);
+    buf = new Float32Array(analyser.fftSize);
+    listening = true;
+    $('micBtn').textContent = 'Stop listening';
+    $('micBtn').classList.add('on');
+    setStatus('Listening. Sing a steady Sa to begin.');
+    return true;
+  }catch(e){
+    if(e && e.name==='NotAllowedError'){
+      setStatus('Microphone access is blocked. Allow it from the address bar, or open this page in its own tab and press Start listening again.', true);
+    }else{
+      setStatus('No microphone was found. Connect one and press Start listening, or use the demo to see how it works.', true);
+    }
+    return false;
+  }
+}
+function stopMic(){
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  stream=null; listening=false; capture=null;
+  $('micBtn').textContent='Start listening';
+  $('micBtn').classList.remove('on');
+  setStatus('Stopped listening.');
+}
+$('micBtn').addEventListener('click',()=>{ listening ? stopMic() : startMic(); });
+
+$('setSaBtn').addEventListener('click', async ()=>{
+  if(!listening){ const ok = await startMic(); if(!ok) return; }
+  capture = {start:performance.now(), vals:[]};
+  setStatus('Sing and hold your Sa for 2 seconds…');
+});
+function finishCapture(){
+  const v = capture.vals; capture = null;
+  if(v.length < 20){ setStatus('Couldn\'t hear a steady note. Hold Sa a little louder and try again.', true); return; }
+  v.sort((a,b)=>a-b);
+  saFreq = v[v.length>>1];
+  let o = sel.querySelector('option[data-custom]');
+  if(!o){ o=document.createElement('option'); o.dataset.custom='1'; sel.prepend(o); }
+  o.value = saFreq.toFixed(3);
+  o.textContent = `Your voice (${saFreq.toFixed(1)} Hz)`;
+  sel.value = o.value;
+  hist = [];
+  setStatus(`Sa set to ${saFreq.toFixed(1)} Hz from your voice.`);
+}
+
+$('playSaBtn').addEventListener('click',()=>{
+  const ac = ensureCtx();
+  const t = ac.currentTime;
+  const osc = ac.createOscillator(), g = ac.createGain();
+  osc.type='triangle'; osc.frequency.value = saFreq;
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(0.18,t+0.05);
+  g.gain.setValueAtTime(0.18,t+1.4);
+  g.gain.linearRampToValueAtTime(0,t+1.8);
+  osc.connect(g).connect(ac.destination);
+  osc.start(t); osc.stop(t+1.85);
+});
+
+const DEMO = [0,2,4,5,7,9,11,12,12,11,9,7,5,4,3,2,1,0];
+$('demoBtn').addEventListener('click',()=>{
+  demo = {start:performance.now()};
+  setStatus('Demo: an aaroh and avroh, ending with komal Ga and komal Re.');
+});
+function demoFreq(now){
+  const t = now-demo.start, step = 520;
+  const i = Math.floor(t/step);
+  if(i >= DEMO.length){
+    if(t > DEMO.length*step + 600){ demo=null; setStatus('Demo finished. Press Start listening to try with your voice.'); }
+    return -1;
+  }
+  const frac = (t%step)/step;
+  let n = DEMO[i];
+  if(frac<0.22 && i>0){ const p=DEMO[i-1]; n = p+(n-p)*(frac/0.22); }
+  const vib = frac>0.45 ? 0.13*Math.sin(t/1000*2*Math.PI*5.5) : 0;
+  return saFreq*Math.pow(2,(n+vib)/12);
+}
+
+$('scriptBtn').addEventListener('click',()=>{
+  script = script==='dev' ? 'lat' : 'dev';
+  $('scriptBtn').textContent = script==='dev' ? 'Show Sa Re Ga' : 'Show सा रे ग';
+  renderTrail();
+  lastCardUpdate = 0;
+});
+
+$('clearBtn').addEventListener('click',()=>{ trail.length=0; lastCommitted=null; renderTrail(); });
+
+/* ---------- notation rendering ---------- */
+function noteHTML(n){
+  const s = SW[mod(n)], o = oct(n);
+  const g = script==='dev' ? s.d : s.l;
+  const dots = k => '<i class="dot"></i>'.repeat(k);
+  const top = (s.type==='t' ? '<i class="bar"></i>' : '') + (o>0 ? dots(o) : '');
+  const bot = o<0 ? dots(-o) : '';
+  return `<span class="n${s.type==='k'?' komal':''}"><span class="top">${top}</span><span class="g">${g}</span><span class="bot">${bot}</span></span>`;
+}
+function renderTrail(){
+  const el = $('notes');
+  if(!trail.length){ el.innerHTML = '<span class="empty">Notes you hold for a moment will appear here.</span>'; return; }
+  el.innerHTML = trail.map(x => x==='gap' ? '<span class="gap"></span>' : noteHTML(x)).join('');
+  el.scrollTop = el.scrollHeight;
+}
+renderTrail();
+
+function updateCard(s, hz, now){
+  if(now - lastCardUpdate < 80) return;
+  lastCardUpdate = now;
+  const card = $('card');
+  if(s===null){ card.classList.add('idle'); return; }
+  card.classList.remove('idle');
+  const n = Math.round(s), cents = (s-n)*100, o = oct(n);
+  $('big').innerHTML = noteHTML(n);
+  $('swName').textContent = SW[mod(n)].name;
+  $('saptak').textContent = o<0 ? 'Mandra saptak (lower)' : o===0 ? 'Madhya saptak (middle)' : 'Taar saptak (upper)';
+  $('needle').style.left = (50 + Math.max(-50,Math.min(50,cents))) + '%';
+  $('cents').textContent = `${cents>=0?'+':''}${cents.toFixed(0)} cents`;
+  $('hz').textContent = `${hz.toFixed(1)} Hz`;
+}
+
+/* ---------- pitch detection (normalised autocorrelation, McLeod-style) ---------- */
+let nsdf = null;
+function detect(b, sr){
+  const N = b.length;
+  let rms = 0; for(let i=0;i<N;i++) rms += b[i]*b[i];
+  rms = Math.sqrt(rms/N);
+  if(rms < 0.012) return -1;
+  const minLag = Math.floor(sr/1000), maxLag = Math.min(Math.floor(sr/65), N>>1);
+  const W = N - maxLag;
+  if(!nsdf || nsdf.length !== maxLag+2) nsdf = new Float32Array(maxLag+2);
+  for(let tau=0; tau<=maxLag+1; tau++){
+    let acf=0, m=0;
+    for(let i=0;i<W;i++){ const a=b[i], c=b[i+tau]; acf += a*c; m += a*a + c*c; }
+    nsdf[tau] = m>0 ? 2*acf/m : 0;
+  }
+  // collect positive-region peaks after first zero crossing
+  const peaks = [];
+  let tau = 1;
+  while(tau < maxLag && nsdf[tau] > 0) tau++;
+  let best=-1, bestVal=-Infinity;
+  for(; tau<maxLag; tau++){
+    if(nsdf[tau] > 0){
+      best=-1; bestVal=-Infinity;
+      while(tau<maxLag && nsdf[tau] > 0){
+        if(nsdf[tau] > bestVal){ bestVal=nsdf[tau]; best=tau; }
+        tau++;
+      }
+      if(best >= minLag) peaks.push(best);
+    }
+  }
+  if(!peaks.length) return -1;
+  let maxV = 0; for(const p of peaks) maxV = Math.max(maxV, nsdf[p]);
+  if(maxV < 0.6) return -1;
+  let chosen = peaks[0];
+  for(const p of peaks){ if(nsdf[p] >= 0.88*maxV){ chosen = p; break; } }
+  const a=nsdf[chosen-1], c=nsdf[chosen], d=nsdf[chosen+1];
+  const denom = a - 2*c + d;
+  const shift = denom !== 0 ? 0.5*(a-d)/denom : 0;
+  const f = sr/(chosen + shift);
+  return (f>=65 && f<=1000) ? f : -1;
+}
+
+/* ---------- note tracking for the phrase ---------- */
+function track(now, s){
+  if(s===null){
+    if(now-lastVoiced > 350 && lastCommitted!==null){
+      lastCommitted = null;
+      if(trail.length && trail[trail.length-1]!=='gap'){ trail.push('gap'); renderTrail(); }
+    }
+    cur.n = null;
+    return;
+  }
+  lastVoiced = now;
+  const n = Math.round(s);
+  if(n !== cur.n){ cur.n=n; cur.start=now; return; }
+  if(now-cur.start >= 180 && n !== lastCommitted){
+    lastCommitted = n;
+    trail.push(n);
+    while(trail.length > 80) trail.shift();
+    renderTrail();
+  }
+}
+
+/* ---------- canvas ---------- */
+const cv = $('cv'), ctx = cv.getContext('2d');
+let dpr = 1, colors = {};
+function readColors(){
+  const cs = getComputedStyle(document.documentElement);
+  for(const k of ['grid','grid-strong','ink','muted','line','line-off','panel'])
+    colors[k] = cs.getPropertyValue('--'+k).trim();
+}
+readColors();
+if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+new MutationObserver(readColors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+function resize(){
+  dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(cv.clientWidth*dpr);
+  cv.height = Math.round(cv.clientHeight*dpr);
+}
+new ResizeObserver(resize).observe(cv);
+resize();
+
+function drawLabel(n, x, y, color){
+  const s = SW[mod(n)], o = oct(n);
+  const g = script==='dev' ? s.d : s.l;
+  ctx.fillStyle = color;
+  ctx.font = script==='dev' ? '15px "Tiro Devanagari Hindi", Georgia, serif' : '600 12px "Hind", system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(g, x, y);
+  const tw = ctx.measureText(g).width;
+  if(s.type==='k') ctx.fillRect(x-tw/2, y+7, tw, 1.5);
+  if(s.type==='t') ctx.fillRect(x-0.75, y-14, 1.5, 6);
+  const k = Math.abs(o);
+  for(let i=0;i<k;i++){
+    const dx = (i-(k-1)/2)*5 + (s.type==='t' && o>0 ? 5 : 0);
+    ctx.beginPath(); ctx.arc(x+dx, o>0 ? y-11 : y+11, 1.8, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+function draw(now){
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if(!w || !h) return;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  const L=54, R=14, T=16, B=26;
+  const pw = w-L-R, ph = h-T-B;
+  const rowH = ph/(HI-LO);
+  const Y = s => T + (HI - s)/(HI-LO)*ph;
+
+  // grid + swara labels
+  for(let n=LO; n<=HI; n++){
+    const idx = mod(n), y = Y(n), type = SW[idx].type;
+    ctx.save();
+    if(idx===0){ ctx.strokeStyle=colors['grid-strong']; ctx.lineWidth=1.5; }
+    else if(type==='s'){ ctx.strokeStyle=colors.grid; ctx.lineWidth=1; }
+    else { ctx.strokeStyle=colors.grid; ctx.lineWidth=1; ctx.setLineDash([3,5]); }
+    ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(w-R,y); ctx.stroke();
+    ctx.restore();
+    if(type==='s' || rowH >= 18) drawLabel(n, L/2, y, idx===0 ? colors.ink : colors.muted);
+  }
+  // time axis
+  ctx.fillStyle = colors.muted;
+  ctx.font = '12px "Hind", system-ui, sans-serif';
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';  ctx.fillText(`${WINDOW/1000} s ago`, L, h-7);
+  ctx.textAlign = 'right'; ctx.fillText('now', w-R, h-7);
+
+  // pitch line
+  ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  let prev = null, last = null, anyVoiced = false;
+  for(const p of samples){
+    if(p.s===null){ prev=null; continue; }
+    const x = w-R - (now-p.t)/WINDOW*pw;
+    if(x < L){ prev=null; continue; }
+    anyVoiced = true;
+    const y = Math.max(T, Math.min(T+ph, Y(p.s)));
+    if(prev && p.t-prev.t < 150){
+      const off = Math.abs(p.s - Math.round(p.s))*100;
+      ctx.strokeStyle = off <= 15 ? colors.line : colors['line-off'];
+      ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(x, y); ctx.stroke();
+    }
+    prev = {t:p.t, x, y};
+    last = {t:p.t, x, y};
+  }
+  if(last && now-last.t < 120){
+    ctx.fillStyle = colors.line;
+    ctx.beginPath(); ctx.arc(last.x, last.y, 6, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = colors.panel; ctx.lineWidth = 2; ctx.stroke();
+  }
+  if(!anyVoiced){
+    ctx.fillStyle = colors.muted;
+    ctx.font = '15px "Hind", system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(listening ? 'Sing a note. Your line will appear here.' : 'Press Start listening and sing, or try the demo.', L+pw/2, T+ph/2);
+  }
+}
+
+/* ---------- main loop ---------- */
+function frame(){
+  const now = performance.now();
+  if(demo || listening){
+    let f = -1;
+    if(demo) f = demoFreq(now);
+    else { analyser.getFloatTimeDomainData(buf); f = detect(buf, audioCtx.sampleRate); }
+    let s = null, med = null;
+    if(f > 0){
+      hist.push(f); if(hist.length>5) hist.shift();
+      med = [...hist].sort((a,b)=>a-b)[hist.length>>1];
+      s = 12*Math.log2(med/saFreq);
+    } else hist = [];
+    samples.push({t:now, s});
+    if(capture && !demo){ if(f>0) capture.vals.push(f); if(now-capture.start > 2000) finishCapture(); }
+    track(now, s);
+    updateCard(s, med, now);
+  }
+  while(samples.length && now-samples[0].t > WINDOW+500) samples.shift();
+  draw(now);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
